@@ -1,0 +1,72 @@
+Some notes on interfacing assembly routines with C using Aztec
+--------------------------------------------------------------
+
+The Manx Aztec C compiler generates code for 8-bit 8080/Z80 systems. These
+systems have a small instruction and register set by modern standards, so a
+lot of functionality is not generated inline, but delegated to the C library.
+For example, the 8080 CPU has few 16-bit operations, so every math operation
+on an integer (add, subtract, multiple, shift, etc) is compiled to a call on
+the C library.  The "-F" switch allows some, but not many, operations to be
+inlined into the generated code.
+
+It's not all that difficult to tell what these generated library calls do,
+because the compiler outputs assembly-language files, with all the library
+calls pretty obvious. So we have ".dv" for divide and ".ml" for multiple, and
+so on. It's not difficult to work out what registers these calls apply to,
+since there are so few of them. In any event, Manx has helpfully provided the
+source for the C library so, even though it's at best sparsely documented, it
+isn't hard to work out what the various compiler-generated calls do. 
+
+We can make a significant saving in the size of the final executable by being
+selective about which C operations to use. Naturally, floating-point math
+will add hugely to the executable; but just using ints rather than longs can
+effect a significant improvement. Using "switch" at all adds about a hundred
+bytes to the output, compared to using multiple "if" statements. Certain
+divisions and multiplications can be done more effectively as shifts, but
+using shifts adds another few hundred bytes. And so on.
+
+Of course, efforts to produce the smallest executable have to be balanced
+with creating a readable, maintainable program. C is not over-burdened with
+constructions, and saving a few hundred bytes by eliminating switch/case
+constructs is probably unhelpful.
+
+It's possible to use the Aztec compiler without using the vendor's C library
+at all. In such a case it's necessary to provide implementations in assembly
+language of all the compiler support functions, along with
+
+- Code to parse the CP/M command line and create argc and argv
+- Code to initialize the system (which is very simple in CP/M)
+- An implementation of exit(), combined with a way to shut down the program
+- Implementations of whatever I/O you need, probably via BDOS calls
+
+If you're implementing functions in assembly to be called from C, be aware of
+the Aztec calling convention. It's stack-based, because the CPU provides so
+few registers. Arguments are pushed onto the stack in left-to-right order,
+and all are 16-bit values (except floating-point numbers).  Because the
+Z80/8080 stack has a descending layout, this means that the first argument
+has the _lowest_ position in memory. 
+
+I do not know what registers have to be preserved in a call made from C, so I
+usually push BC and DE onto the stack at the start of a function, and pop
+them at the end. This means that the first argument is six bytes about the
+stack pointer, the second eight bytes, and so on.
+
+myfunc:
+    PUSH  D
+    PUSH  B
+    LXI	  H, 6 
+    DAD	  SP
+    MOV	  C, M
+    INX   H
+    MOV	  B, M
+    ; BC now contains the first argument to the function
+
+The called function is expected to return its result in HL, but with the zero
+flag set if HL is, in fact, zero. Since the 8080 has no instruction to test
+HL, it's necessary to use this kind of formula to end a function: 
+
+    MOV     A, H
+    ORA     L
+    RET
+
+

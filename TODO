@@ -1,0 +1,6 @@
+Modify data storage to locate file data blocks using pointers, so
+sorting can be done by moving pointers, not complete data blocks.
+
+Files that cannot be opened are reported as zero size. Probably some sort
+of error indicator should be displayed instead.
+

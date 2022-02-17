@@ -1,0 +1,7 @@
+temp
+*.COM
+*.MSG
+*.o
+_*.asm
+backup.sh
+*.LIB
