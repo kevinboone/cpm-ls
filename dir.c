@@ -155,7 +155,7 @@ char *out;
 struct File *dir_fl_off (n)
 int n;
   {
-  return files + n * sizeof (struct File);
+  return &(files[n]); 
   }
 
 
@@ -244,6 +244,9 @@ int flags;
 
   /* Fill in the FCB drive and filename fields based on the supplied
      drive and file spec. */
+
+  for (i = 0; i < 36; i++) fcb[i] = 0;
+
   if (!fcb_fill_ptn (thing, fcb, &has_file)) 
     {
     puts2 ("Bad file or pattern: ");
@@ -262,18 +265,20 @@ int flags;
     char *fcbbuf = DMABUF + 32 * n;
     struct File *file = dir_fl_off (num_files);
     char *cpmname = file->cpmname;
+
     /* Store both the CPM name and the display name for each file, as
        we will need both later. We sacrifice a bit of storage for
        increased speed. */
     file->attr = 0;
+
     namelen = dir_san (fcbbuf + 1, file->name);
     memcpy (file->cpmname, fcbbuf + 1, 11);
     cpmname[12] = 0;
-    if (cpmname[9] & BD_ATT_MASK)
+    if (cpmname[8] & BD_ATT_MASK)
       file->attr |= ATT_RO;
-    if (cpmname[10] & BD_ATT_MASK)
+    if (cpmname[9] & BD_ATT_MASK)
       file->attr |= ATT_SYS;
-    if (cpmname[11] & BD_ATT_MASK)
+    if (cpmname[10] & BD_ATT_MASK)
       file->attr |= ATT_ARCH;
 
     /* Work out the maximum filename length, used for formatting later */
@@ -303,12 +308,11 @@ int flags;
     for (i = 0; i < num_files; i++)
       {
       int j;
-      /*struct File *file = files + i * sizeof (struct File);*/
       struct File *file = dir_fl_off (i);
       for (j = 0; j < sizeof (tempfcb); j++) tempfcb[j] = 0;
       tempfcb[0] = fcb[0];
       memcpy (tempfcb + 1, file->cpmname, 11);
-      if (bdos (BDOS_OPEN, tempfcb) == 0)
+      if (bdos (BDOS_OPEN, tempfcb) <= 3)
 	{
 	bdos (BDOS_FSIZE, tempfcb);
 	file->recs = tempfcb[33] + 256 * tempfcb[34];

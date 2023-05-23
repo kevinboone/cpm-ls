@@ -2,7 +2,7 @@
 
 An implementation of the Unix `ls` utility for CP/M. 
 
-Version 0.1, February 2022
+Version 0.1b, February 2022
 
 ## What is this?
 
@@ -16,6 +16,13 @@ cross-compiled on a modern workstation.
 This implementation is, of course, much simpler than the Linux one, because
 CP/M stores only a rudimentary set of information about a file, and does not
 support directories.
+
+Features:
+
+- Sorts files in a variety of ways
+- Wide listing fits to width
+- Long listing shows file attributes and sizes
+- Supports Unix-style and CP/M-style command-line switches
 
 ## Usage
 
@@ -86,10 +93,27 @@ prevents the linker incorporating all the buffered I/O stuf from the standard
 library, reducing the code size by about 6k (that doesn't sound much, but
 it's about 30%).
 
+## Technical notes
+
+In order to sort files, their names and some attributes must first be
+read into memory -- CP/M provides no help for this. This means that the
+utility can potentially use a lot of memory. Even if unsorted operation
+is not specified, it might still be necessary to read the files into memory.
+For example, to find the longest filename (for the purposes of fitting
+to the screen), it's actually quicker to read the filenames into memory,
+than to iterate them twice.
+
+This implementation detail does create a limitation (see below)
+on the number of files that can be displayed. 
+
+I chose the Aztec C compiler for this utility, because it generates 
+Z80-compatible 8080 code. I suspect that a Z80-specific compiler would
+produce smaller code, that might be a little faster.
+
 ## Limitations
 
 By default, `cpm-ls` lists a maximum of 256 files, allowing it to run on
-system with 16kB RAM without much memory checking.
+a system with 16kB RAM without much memory checking.
 
 Sorting files, particular by name, can be slow on low-powered systems (and
 "low-powered" really means something in the CP/M world).
@@ -100,6 +124,15 @@ neatness, but to avoid any need for arithmetic of more than 16-bit range
 
 ## Legal and copyright
 
-Copyright (c)2022 Kevin Boone, and released under the terms of the GNU Public
+Copyright (c)2022-3 Kevin Boone, and released under the terms of the GNU Public
 Licence v3.0. 
+
+## Revisions
+
+0.1b May 2023 : 
+
+- Fixed a horrible bug in memory management
+- Fixed a bug that caused file attributes not to display
+- Fixed a bug that caused some file sizes to display wrongly as zero
+
 
